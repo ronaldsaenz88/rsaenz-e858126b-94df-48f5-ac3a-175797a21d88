@@ -3,6 +3,7 @@
 module.exports = {
     darkMode: 'class',
     content: [
+      "./apps/dashboard/src/**/*.{html,ts}",
       // add other paths if needed
     ],
     theme: {
