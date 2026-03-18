@@ -1,0 +1,33 @@
+/* You can add global styles to this file, and also import other style files */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --color-mint-500: oklch(0.72 0.11 178);
+}
+
+/* Give the ghost (preview) element a visible lift while dragging. */
+.cdk-drag-preview {
+    box-sizing: border-box;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  /* The `transition` shorthand resets transition-property to `transform` only,
+     so the CDK always finds exactly one matching duration (250 ms) at index 0.
+     This prevents the parseCssTimeUnitsToMs TypeError. */
+  .cdk-drag-animating {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  /* Animate sibling cards sliding into their new positions while dragging. */
+  .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  /* Dim the placeholder that stays in the original slot. */
+  .cdk-drag-placeholder {
+    opacity: 0.3;
+  }

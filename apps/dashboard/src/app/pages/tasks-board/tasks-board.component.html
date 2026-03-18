@@ -1,0 +1,96 @@
+<div class="p-4 max-w-7xl mx-auto">
+  <!-- Board Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+    <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Task Board</h1>
+    <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+      <button 
+        (click)="listTasks()" 
+        class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition font-semibold w-full sm:w-auto"
+      >
+        Tasks List
+      </button>
+      <button 
+        *ngIf="canCreate"
+        (click)="addTask()" 
+        class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition font-semibold w-full sm:w-auto"
+      >
+        + Add Task
+      </button>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4 mb-4 sm:flex-row sm:flex-wrap">
+    <input
+      type="text"
+      placeholder="Search tasks…"
+      class="border dark:border-gray-600 rounded px-2 py-1 w-full sm:w-auto bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+      [(ngModel)]="filterText"
+      (ngModelChange)="onFilterChange()"
+    />
+    <select class="border dark:border-gray-600 rounded px-2 py-1 w-full sm:w-auto bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" [(ngModel)]="filterCategory" (ngModelChange)="onFilterChange()">
+      <option value="">All Categories</option>
+      <option *ngFor="let cat of categories">{{cat}}</option>
+    </select>
+  </div>
+  
+  <!-- Tasks Board -->
+  <div class="flex flex-col md:flex-row gap-4">
+    <div *ngFor="let status of statuses" class="flex-1">
+      <div class="mb-2 flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full"
+          [ngClass]="{
+            'bg-yellow-400': status === 'todo',
+            'bg-blue-400': status === 'inprogress',
+            'bg-green-500': status === 'done',
+            'bg-gray-400': status === 'archived'
+          }"></span>
+        <span class="font-semibold text-lg capitalize dark:text-gray-200">
+          {{ status === 'todo' ? 'To Do' : status === 'inprogress' ? 'In Progress' : status === 'archived' ? 'Archived' : 'Done' }}
+        </span>
+        <span class="ml-auto text-xs text-gray-500 dark:text-gray-400 font-medium bg-gray-200 dark:bg-gray-700 rounded-full px-2 py-0.5">
+          {{ columnTasks[status].length || 0 }}
+        </span>
+      </div>
+      <div
+        cdkDropList
+        [id]="status"
+        [cdkDropListData]="columnTasks[status]"
+        [cdkDropListConnectedTo]="statuses"
+        class="bg-gray-100 dark:bg-gray-700 min-h-[300px] rounded-xl p-3 space-y-3 shadow-inner"
+        (cdkDropListDropped)="drop($event, status)">
+        <div
+          *ngFor="let task of columnTasks[status]"
+          cdkDrag
+          [cdkDragDisabled]="!canDrag"
+          class="bg-white dark:bg-gray-800 rounded-lg shadow flex flex-col gap-2 p-3 group transition hover:shadow-lg border border-gray-200 dark:border-gray-600 duration-200"
+          [class.cursor-move]="canDrag"
+          [class.cursor-default]="!canDrag"
+        >
+          <div class="flex justify-between items-center">
+            <div class="font-bold text-gray-800 dark:text-gray-100 truncate">{{ task.title }}</div>
+            <div class="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition">
+              <button *ngIf="canEdit" (click)="editTask(task)" class="text-blue-500 hover:text-blue-700 p-1" title="Edit">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M15.232 5.232l3.536 3.536M9 13l6.536-6.536a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm0 0V17h4"></path>
+                </svg>
+              </button>
+              <button *ngIf="canDelete" (click)="deleteTask(task)" class="text-red-500 hover:text-red-700 p-1" title="Delete">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+            <span class="bg-zinc-100 dark:bg-gray-700 px-2 py-0.5 rounded">{{ task.category }}</span>
+            <span>{{ task.dueDate | date:'MMM d, yyyy' }}</span>
+          </div>
+          <div class="text-gray-700 dark:text-gray-300 text-sm">{{ task.description }}</div>
+        </div>
+        <div *ngIf="columnTasks[status].length === 0" class="text-center text-gray-400 dark:text-gray-500 py-8 italic">
+          No tasks in this column
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
