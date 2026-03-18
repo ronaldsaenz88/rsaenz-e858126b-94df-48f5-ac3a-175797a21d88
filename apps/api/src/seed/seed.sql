@@ -6,8 +6,8 @@
 -- (synchronize: true) has already created all tables and sequences.
 --
 -- Usage – Docker Compose:
---   docker compose cp apps/api/src/seed/seed.sql task_db:/seed.sql
---   docker compose exec task_db psql -U taskuser -d taskdb -f /seed.sql
+--   docker compose cp apps/api/src/seed/seed.sql tasks_db:/seed.sql
+--   docker compose exec tasks_db psql -U taskuser -d taskdb -f /seed.sql
 --
 -- Usage – direct psql (PostgreSQL exposed on host port 5435):
 --   psql -h localhost -p 5435 -U taskuser -d taskdb \
@@ -15,8 +15,9 @@
 --
 -- Default credentials created by this script:
 --   owner@example.com   /  OwnerPass123!   →  Owner  (full access, all orgs)
---   admin@example.com   /  AdminPass123!   →  Admin  (create/edit/delete in org)
---   viewer@example.com  /  ViewerPass123!  →  Viewer (read-only, own org)
+--   admin@example.com   /  AdminPass123!   →  Admin  (create/edit/delete in org 1)
+--   viewer@example.com  /  ViewerPass123!  →  Viewer (read-only, own org 2)
+--   adminOther@example.com   /  AdminPass123!   →  Admin  (create/edit/delete in org 3)
 --
 -- All INSERTs use ON CONFLICT … DO NOTHING so the script is safe to re-run.
 -- =============================================================================

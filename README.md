@@ -73,8 +73,8 @@ initial permissions, roles, organizations, and users.
 
 ```bash
 # Using Docker Compose – copy the file into the container, then execute it:
-docker compose cp apps/api/src/seed/seed.sql task_db:/seed.sql
-docker compose exec task_db psql -U taskuser -d taskdb -f /seed.sql
+docker compose cp apps/api/src/seed/seed.sql tasks_db:/seed.sql
+docker compose exec tasks_db psql -U taskuser -d taskdb -f /seed.sql
 
 # Or directly with psql (PostgreSQL is exposed on host port 5435):
 psql -h localhost -p 5435 -U taskuser -d taskdb \
@@ -88,13 +88,17 @@ Default credentials after seeding:
 | Email | Password | Role |
 |---|---|---|
 | owner@example.com | OwnerPass123! | Owner (full access, all orgs) |
-| admin@example.com | AdminPass123! | Admin (create/edit/delete tasks in org) |
-| viewer@example.com | ViewerPass123! | Viewer (read-only, own org) |
+| admin@example.com | AdminPass123! | Admin (create/edit/delete tasks in org 1) |
+| viewer@example.com | ViewerPass123! | Viewer (read-only, own org 2) |
+| adminOther@example.com | AdminPass123! | Admin (create/edit/delete tasks in org 3) |
 
 ### Running Tests
 ```bash
 # Backend tests
 npx nx test api --no-coverage
+
+# Frontend tests
+npx nx test dashboard --no-coverage
 
 # Or directly with Jest:
 npx jest --config apps/api/jest.config.ts --no-coverage
