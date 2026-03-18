@@ -14,5 +14,5 @@ import { FooterComponent } from './layout/footer/footer.component';
   styleUrl: './app.css',
 })
 export class App {
-  protected title = 'Task Manager Dashboard';
+  protected title = 'Secure Task Management System';
 }
