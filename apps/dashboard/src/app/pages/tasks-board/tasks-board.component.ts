@@ -20,9 +20,42 @@ export class TasksBoardComponent implements OnInit {
     TASK_STATUSES.map(s => [s, [] as Task[]])
   );
   filterCategory = '';
+  filterStatus = '';
   filterText = '';
+  sortColumn = '';
+  sortAsc = true;
   categories = TASK_CATEGORIES;
   statuses = TASK_STATUSES;
+
+  get tasks(): Task[] { return this.taskStore.tasks(); }
+
+  get filteredTasks(): Task[] {
+    const filtered = this.taskStore.tasks().filter(t =>
+      (!this.filterCategory || t.category === this.filterCategory) &&
+      (!this.filterStatus   || t.taskStatus === this.filterStatus) &&
+      (!this.filterText ||
+        t.title.toLowerCase().includes(this.filterText.toLowerCase()) ||
+        (t.description ?? '').toLowerCase().includes(this.filterText.toLowerCase()))
+    );
+    if (!this.sortColumn) return filtered;
+    return [...filtered].sort((a, b) => {
+      const col = this.sortColumn as keyof Task;
+      const aVal = (a[col] ?? '') as string;
+      const bVal = (b[col] ?? '') as string;
+      return this.sortAsc
+        ? aVal.toString().localeCompare(bVal.toString())
+        : bVal.toString().localeCompare(aVal.toString());
+    });
+  }
+
+  setSort(column: string) {
+    if (this.sortColumn === column) {
+      this.sortAsc = !this.sortAsc;
+    } else {
+      this.sortColumn = column;
+      this.sortAsc = true;
+    }
+  }
 
   // Constructor using inject (Angular 16+)
   private taskStore = inject(TaskStore);
