@@ -9,7 +9,7 @@ services:
     networks:
       - net
     depends_on:
-      - task_db
+      - tasks_db
 
   dashboard:
     build:
@@ -20,11 +20,11 @@ services:
     networks:
       - net
     depends_on:
-      - task_db
+      - tasks_db
       - api
 
-  task_db:
-    container_name: task_db
+  tasks_db:
+    container_name: tasks_db
     shm_size: 256m
     ports:
       - 5435:5432

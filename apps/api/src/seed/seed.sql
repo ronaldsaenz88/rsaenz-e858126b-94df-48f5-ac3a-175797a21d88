@@ -67,8 +67,9 @@ ON CONFLICT DO NOTHING;
 -- 4. Organizations  (2-level hierarchy: parent → child)
 -- ---------------------------------------------------------------------------
 INSERT INTO organization (id, "createdAt", "updatedAt", status, name, "parentId") VALUES
-  (1, NOW(), NOW(), 'active', 'Acme Corp',        NULL),
-  (2, NOW(), NOW(), 'active', 'Acme Engineering', 1)
+  (1, NOW(), NOW(), 'active', 'Test Corp',        NULL),
+  (2, NOW(), NOW(), 'active', 'Test Engineering', 1),
+  (3, NOW(), NOW(), 'active', 'Other Corp',       NULL)
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
@@ -79,8 +80,10 @@ INSERT INTO "user" (id, "createdAt", "updatedAt", status, email, password, "orga
    '$2b$10$DnrPfDs9DFRz02qpPxAVIuDoWF9hhHMaUcJaOq0hKWNyzMbjNytti', 1),
   (2, NOW(), NOW(), 'active', 'admin@example.com',
    '$2b$10$A.i8YRpDpeaYgbY9oS7Qsek6ikhD/lt3AnbK4zmtVEF/12NVi9lcK', 1),
-  (3, NOW(), NOW(), 'active', 'viewer@example.com',
-   '$2b$10$5FyWbpWJIIP/n3mui4No5eyZckOYdDNkUKi9uT.wdnD6wmdCv4.D2', 2)
+  (3, NOW(), NOW(), 'active', 'viewer@example.com',,
+   '$2b$10$5FyWbpWJIIP/n3mui4No5eyZckOYdDNkUKi9uT.wdnD6wmdCv4.D2', 2),
+  (4, NOW(), NOW(), 'active', 'adminOther@example.com',
+   '$2b$10$A.i8YRpDpeaYgbY9oS7Qsek6ikhD/lt3AnbK4zmtVEF/12NVi9lcK', 3)
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
@@ -89,7 +92,8 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO user_roles_role ("userId", "roleId") VALUES
   (1, 1),  -- owner@example.com  → owner role
   (2, 2),  -- admin@example.com  → admin role
-  (3, 3)   -- viewer@example.com → viewer role
+  (3, 3),   -- viewer@example.com → viewer role
+  (4, 2)   -- adminOther@example.com → admin role
 ON CONFLICT DO NOTHING;
 
 -- ---------------------------------------------------------------------------
