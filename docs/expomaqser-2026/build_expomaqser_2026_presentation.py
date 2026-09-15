@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 from typing import List, Tuple
 
 from PIL import Image, ImageDraw, ImageFont
 from pptx import Presentation
 from pptx.dml.color import RGBColor
+from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
 
@@ -36,17 +38,61 @@ PALETTE = {
 }
 
 
-def _font(size: int, bold: bool = False):
-    names = [
-        "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+_FONT_PATHS_CACHE: tuple[str, str] | None = None
+
+
+def _resolve_font_paths(font_regular: Path | None = None, font_bold: Path | None = None) -> tuple[str, str]:
+    """Resolve deterministic font files required to generate reproducible PNG assets."""
+    regular_candidates = [
+        str(font_regular) if font_regular else "",
+        "DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/Library/Fonts/DejaVuSans.ttf",
+        "C:/Windows/Fonts/DejaVuSans.ttf",
     ]
-    for name in names:
-        try:
-            return ImageFont.truetype(name, size=size)
-        except OSError:
-            continue
-    return ImageFont.load_default()
+    bold_candidates = [
+        str(font_bold) if font_bold else "",
+        "DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/Library/Fonts/DejaVuSans-Bold.ttf",
+        "C:/Windows/Fonts/DejaVuSans-Bold.ttf",
+    ]
+
+    def _first_loadable(candidates: List[str]) -> str | None:
+        for path in candidates:
+            if not path:
+                continue
+            try:
+                ImageFont.truetype(path, size=12)
+                return path
+            except OSError:
+                continue
+        return None
+
+    regular_path = _first_loadable(regular_candidates)
+    bold_path = _first_loadable(bold_candidates)
+
+    if not regular_path or not bold_path:
+        raise RuntimeError(
+            "DejaVuSans regular/bold fonts are required to generate reproducible visual assets. "
+            "Install DejaVu fonts or provide these files before running the script."
+        )
+
+    return regular_path, bold_path
+
+
+def configure_font_paths(font_regular: Path | None = None, font_bold: Path | None = None) -> None:
+    global _FONT_PATHS_CACHE
+    _FONT_PATHS_CACHE = _resolve_font_paths(font_regular=font_regular, font_bold=font_bold)
+
+
+def _font(size: int, bold: bool = False):
+    global _FONT_PATHS_CACHE
+    if _FONT_PATHS_CACHE is None:
+        _FONT_PATHS_CACHE = _resolve_font_paths()
+    regular_path, bold_path = _FONT_PATHS_CACHE
+    font_path = bold_path if bold else regular_path
+    return ImageFont.truetype(font_path, size=size)
 
 
 def draw_visual(path: Path, title: str, subtitle: str, motifs: List[str]) -> None:
@@ -82,8 +128,13 @@ def draw_visual(path: Path, title: str, subtitle: str, motifs: List[str]) -> Non
     img.save(path)
 
 
-def build_assets() -> dict[str, Path]:
+def build_assets(
+    refresh_assets: bool = False,
+    font_regular: Path | None = None,
+    font_bold: Path | None = None,
+) -> dict[str, Path]:
     ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+    configure_font_paths(font_regular=font_regular, font_bold=font_bold)
     visuals: dict[str, Tuple[str, str, List[str]]] = {
         "opening": (
             "EXPOMAQSER 2026 | Guayaquil",
@@ -125,18 +176,16 @@ def build_assets() -> dict[str, Path]:
     out: dict[str, Path] = {}
     for key, (title, subtitle, motifs) in visuals.items():
         img_path = ASSETS_DIR / f"{key}.png"
-        draw_visual(img_path, title, subtitle, motifs)
+        if refresh_assets or not img_path.exists():
+            draw_visual(img_path, title, subtitle, motifs)
         out[key] = img_path
     return out
 
 
 def add_bg(slide, color=WHITE):
-    shape = slide.shapes.add_shape(1, 0, 0, WIDE_W, WIDE_H)
-    shape.fill.solid()
-    shape.fill.fore_color.rgb = color
-    shape.line.fill.background()
-    slide.shapes._spTree.remove(shape._element)
-    slide.shapes._spTree.insert(2, shape._element)
+    fill = slide.background.fill
+    fill.solid()
+    fill.fore_color.rgb = color
 
 
 def add_header(slide, title: str, subtitle: str | None = None, dark=False):
@@ -157,7 +206,7 @@ def add_header(slide, title: str, subtitle: str | None = None, dark=False):
 
 
 def add_footer(slide, n: int, dark=False):
-    line = slide.shapes.add_shape(1, Inches(0.65), Inches(7.05), Inches(12.05), Inches(0.02))
+    line = slide.shapes.add_shape(MSO_AUTO_SHAPE_TYPE.RECTANGLE, Inches(0.65), Inches(7.05), Inches(12.05), Inches(0.02))
     line.fill.solid()
     line.fill.fore_color.rgb = TEAL
     line.line.fill.background()
@@ -187,7 +236,27 @@ def add_visual(slide, image_path: Path):
 
 
 def add_note(slide, text: str):
-    slide.notes_slide.notes_text_frame.text = text
+    notes_frame = slide.notes_slide.notes_text_frame
+    notes_frame.clear()
+    notes_frame.paragraphs[0].text = text
+
+
+def verify_notes_persist(path: Path, expected_notes: List[str]) -> None:
+    """Ensure generated speaker notes survive save/reload in the output deck."""
+    reloaded = Presentation(path)
+    reloaded_notes = [slide.notes_slide.notes_text_frame.text.strip() for slide in reloaded.slides]
+
+    if len(reloaded_notes) != len(expected_notes):
+        raise RuntimeError(
+            f"Speaker notes persistence check failed: expected {len(expected_notes)} notes, found {len(reloaded_notes)}."
+        )
+
+    for idx, (expected, actual) in enumerate(zip(expected_notes, reloaded_notes), start=1):
+        if actual != expected.strip():
+            raise RuntimeError(
+                "Speaker notes persistence check failed "
+                f"on slide {idx}: expected '{expected.strip()}', found '{actual}'."
+            )
 
 
 def add_title_only_visual(prs: Presentation, n: int, title: str, subtitle: str, image_path: Path, note: str):
@@ -199,8 +268,22 @@ def add_title_only_visual(prs: Presentation, n: int, title: str, subtitle: str, 
     add_note(s, note)
 
 
-def build_deck():
-    visuals = build_assets()
+def build_deck(
+    refresh_assets: bool = False,
+    output_path: Path = OUTPUT,
+    font_regular: Path | None = None,
+    font_bold: Path | None = None,
+):
+    """Build and save the EXPOMAQSER deck, returning (output_path, slide_count).
+
+    Raises RuntimeError if required fonts cannot be resolved or if speaker notes
+    fail the save/reload persistence check.
+    """
+    visuals = build_assets(
+        refresh_assets=refresh_assets,
+        font_regular=font_regular,
+        font_bold=font_bold,
+    )
 
     prs = Presentation()
     prs.slide_width = WIDE_W
@@ -500,10 +583,44 @@ def build_deck():
         "Invitar al público a aterrizar un caso propio: qué decisión crítica mejorarían mañana si integran datos de campo y negocio.",
     )
 
-    prs.save(OUTPUT)
-    print(f"Presentation generated: {OUTPUT}")
-    print(f"Slides: {len(prs.slides)}")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    prs.save(output_path)
+    expected_notes = [slide.notes_slide.notes_text_frame.text.strip() for slide in prs.slides]
+    verify_notes_persist(output_path, expected_notes=expected_notes)
+    return output_path, len(prs.slides)
 
 
 if __name__ == "__main__":
-    build_deck()
+    parser = argparse.ArgumentParser(description="Build revised EXPOMAQSER 2026 presentation.")
+    parser.add_argument(
+        "--refresh-assets",
+        action="store_true",
+        help="Regenerate PNG visual assets even if they already exist.",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=OUTPUT,
+        help="Output .pptx path. Defaults to docs/expomaqser-2026/Mas_alla_de_la_maquinaria_EXPOMAQSER_2026.pptx",
+    )
+    parser.add_argument(
+        "--font-regular",
+        type=Path,
+        default=None,
+        help="Optional path to the regular DejaVuSans font file for deterministic asset generation.",
+    )
+    parser.add_argument(
+        "--font-bold",
+        type=Path,
+        default=None,
+        help="Optional path to the bold DejaVuSans font file for deterministic asset generation.",
+    )
+    args = parser.parse_args()
+    saved_path, slide_count = build_deck(
+        refresh_assets=args.refresh_assets,
+        output_path=args.output,
+        font_regular=args.font_regular,
+        font_bold=args.font_bold,
+    )
+    print(f"Presentation generated: {saved_path}")
+    print(f"Slides: {slide_count}")
